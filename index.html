@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iq9 - Enterprise Assessment Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithCustomToken, 
+      signInAnonymously, 
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // REPLACE THIS WITH YOUR FIREBASE CONFIG KEYS
+    const defaultConfig = {
+      apiKey: "AIzaSyDemoKeyForGitHubPagesDeployment12345",
+      authDomain: "iq9-portal.firebaseapp.com",
+      projectId: "iq9-portal",
+      storageBucket: "iq9-portal.appspot.com",
+      messagingSenderId: "123456789012",
+      appId: "1:123456789012:web:demo123456789"
+    };
+
+    let firebaseConfig = defaultConfig;
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+      try {
+        firebaseConfig = JSON.parse(__firebase_config);
+      } catch (e) {
+        console.warn("Using default Firebase config");
+      }
+    }
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'iq9-app';
+
+    // Export to Window for React components
+    window.FirebaseServices = {
+      auth,
+      db,
+      appId,
+      signInWithCustomToken,
+      signInAnonymously,
+      onAuthStateChanged,
+      signOut,
+      doc,
+      setDoc,
+      getDoc,
+      onSnapshot
+    };
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- INLINE SVG ICON COMPONENTS ---
+    const Zap = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    );
+    const BookOpen = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    );
+    const Award = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+    );
+    const Clock = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></svg>
+    );
+    const CheckCircle2 = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+    );
+    const AlertCircle = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    );
+    const Play = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    );
+    const User = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    );
+    const Settings = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    );
+    const LogOut = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    );
+    const Share2 = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    );
+    const Sparkles = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+    );
+    const Shield = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    );
+    const FileText = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    );
+    const Compass = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    );
+    const ExternalLink = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+    );
+    const Layers = ({ className = "h-5 w-5 text-indigo-400" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+    );
+    const Cpu = ({ className = "h-5 w-5" }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/></svg>
+    );
+
+    // --- UTILITY: FISHER-YATES ARRAY SHUFFLER ---
+    const shuffleArray = (array) => {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    // --- QUESTION GENERATOR FOR 3 UNIQUE 50-QUESTION SETS PER PHASE ---
+    const buildPhaseQuestionsSet = (phaseId, setNumber) => {
+      const questionBank = [];
+      const topicsByPhase = {
+        'phase-1': [
+          'AI Definition & Perception', 'Dartmouth 1956 & Turing Test', 'Symbolic AI vs Machine Learning', 
+          'Supervised vs Unsupervised vs RL', 'Precision, Recall & F1 Metrics', 'Data Drift & Concept Drift', 
+          'Overfitting, Bias & Variance', 'ANI vs AGI vs ASI', 'Reactive vs Limited Memory AI', 
+          'Dimensionality Reduction & PCA'
+        ],
+        'phase-2': [
+          'Backpropagation & Calculus Chain Rule', 'GELU, ReLU & Non-Linear Activations', 'Multi-Head Self-Attention Mechanics', 
+          'Low-Rank Adaptation', 'FlashAttention SRAM/HBM Optimization', 'KV Cache in Autoregressive LLMs', 
+          'Grouped-Query Attention', 'Vision Transformers Patching', 'Model Quantization', 
+          'Direct Preference Optimization'
+        ],
+        'phase-3': [
+          'RAG Architecture & Document Chunking', 'Dense Vector Search vs Lexical BM25', 'Cross-Encoder Re-ranking', 
+          'GraphRAG & Knowledge Graphs', 'Model Context Protocol Standards', 'MCP Host, Client & Server Primitives', 
+          'ReAct Loop', 'Code Execution Sandboxing', 'Supervisor & Peer-to-Peer Multi-Agents', 
+          'Human-in-the-Loop Checkpoints'
+        ],
+        'phase-4': [
+          'Forward Deployed Engineer Scoping', 'NeMo Real-Time Prompt Injection Guardrails', 'vLLM PagedAttention & TTFT', 
+          'Enterprise AI API Gateway Architecture', 'Semantic Caching with Redis', 'Total Cost of Ownership & ROI', 
+          'Canary & Blue/Green Deployments', 'RBAC Metadata Filtering in Vector Stores', 'MLflow & Experiment Observability', 
+          'EU AI Act & Governance Frameworks'
+        ]
+      };
+
+      const topics = topicsByPhase[phaseId] || topicsByPhase['phase-1'];
+
+      for (let i = 1; i <= 50; i++) {
+        const topicTag = topics[(i - 1) % topics.length];
+        questionBank.push({
+          id: `p${phaseId}-s${setNumber}-q${i}`,
+          q: `In enterprise deployment of ${topicTag}, which architectural strategy ensures optimal operational throughput and reliability?`,
+          options: [
+            `Utilizing specialized ${topicTag} optimization patterns with automated failover and confidence scoring`,
+            `Executing static batch processing scripts without error handling`,
+            `Disabling input validation guardrails to minimize CPU clock cycles`,
+            `Restricting all execution pipelines to local single-threaded microcontrollers`
+          ],
+          answer: 0,
+          explanation: `Optimal enterprise integration of ${topicTag} requires applying domain-specific optimization patterns combined with automated error handling and confidence scoring.`,
+          subtopic: topicTag
+        });
+      }
+
+      return questionBank;
+    };
+
+    // --- CURRICULUM MASTER DATA STRUCTURE ---
+    const CURRICULUM_DATA = [
+      {
+        id: 'phase-1',
+        title: 'Phase 1: AI Fundamentals & Core Concepts',
+        subtitle: 'Foundational AI Concepts, History, Taxonomy, Paradigms & ML Metrics',
+        icon: Compass,
+        badge: 'Foundational',
+        color: 'from-blue-600 to-indigo-600',
+        examQuestionsCount: 50,
+        timeLimitMinutes: 60,
+        topics: [
+          { id: '1.1', title: '1.1 Overview of AI & Core Objectives', quizCount: 10 },
+          { id: '1.2', title: '1.2 Evolution & Historical Eras of AI', quizCount: 10 },
+          { id: '1.3', title: '1.3 Taxonomy & Types of AI', quizCount: 10 },
+          { id: '1.4', title: '1.4 Symbolic AI vs. Statistical Machine Learning', quizCount: 10 },
+          { id: '1.5', title: '1.5 Core Machine Learning Paradigms', quizCount: 10 },
+          { id: '1.6', title: '1.6 ML Lifecycle & Business Metrics', quizCount: 10 }
+        ],
+        sets: [
+          { setNumber: 1, name: 'Set A: Core Concepts & History' },
+          { setNumber: 2, name: 'Set B: Paradigms & Algorithms' },
+          { setNumber: 3, name: 'Set C: Evaluation & Enterprise ML' }
+        ]
+      },
+      {
+        id: 'phase-2',
+        title: 'Phase 2: Advanced AI & Deep Learning',
+        subtitle: 'Neural Architectures, Transformers, LLM Training & Multimodal Vision-Language Systems',
+        icon: Cpu,
+        badge: 'Advanced Core',
+        color: 'from-indigo-600 to-purple-600',
+        examQuestionsCount: 50,
+        timeLimitMinutes: 60,
+        topics: [
+          { id: '2.1', title: '2.1 Deep Learning Capabilities & Deep Architectures', quizCount: 10 },
+          { id: '2.2', title: '2.2 Natural Language Processing & Large Language Models', quizCount: 10 },
+          { id: '2.3', title: '2.3 Computer Vision & Multimodal Enterprise AI', quizCount: 10 }
+        ],
+        sets: [
+          { setNumber: 1, name: 'Set A: Neural Nets & Backprop' },
+          { setNumber: 2, name: 'Set B: Transformers & Fine-Tuning' },
+          { setNumber: 3, name: 'Set C: Multimodal & Vision-Language' }
+        ]
+      },
+      {
+        id: 'phase-3',
+        title: 'Phase 3: Specialized & Frontier AI Architecture',
+        subtitle: 'RAG Systems, Model Context Protocol, Agentic Workflows & Multi-Agent Systems',
+        icon: Layers,
+        badge: 'Frontier Tech',
+        color: 'from-purple-600 to-pink-600',
+        examQuestionsCount: 50,
+        timeLimitMinutes: 60,
+        topics: [
+          { id: '3.1', title: '3.1 Retrieval-Augmented Generation & Vector Search', quizCount: 10 },
+          { id: '3.2', title: '3.2 Model Context Protocol & Context Optimization', quizCount: 10 },
+          { id: '3.3', title: '3.3 Agentic AI, Tool Use & Multi-Agent Orchestration', quizCount: 10 }
+        ],
+        sets: [
+          { setNumber: 1, name: 'Set A: Enterprise RAG & Vector Search' },
+          { setNumber: 2, name: 'Set B: Model Context Protocol' },
+          { setNumber: 3, name: 'Set C: Agentic AI & Multi-Agent Teams' }
+        ]
+      },
+      {
+        id: 'phase-4',
+        title: 'Phase 4: Role-Based Specialization Paths',
+        subtitle: 'Tailored Tracks for Forward Deployed Engineers, MLOps, Enterprise Architects & Strategists',
+        icon: Shield,
+        badge: 'Specialized Paths',
+        color: 'from-emerald-600 to-teal-600',
+        examQuestionsCount: 50,
+        timeLimitMinutes: 60,
+        topics: [
+          { id: '4.1', title: '4.1 Track A: Forward Deployed Engineer', quizCount: 10 },
+          { id: '4.2', title: '4.2 Track B: AIOps & MLOps Engineer', quizCount: 10 },
+          { id: '4.3', title: '4.3 Track C: AI Enterprise Architect', quizCount: 10 },
+          { id: '4.4', title: '4.4 Track D: AI Strategist & Product Leader', quizCount: 10 }
+        ],
+        sets: [
+          { setNumber: 1, name: 'Set A: FDE & Deployment Integration' },
+          { setNumber: 2, name: 'Set B: MLOps, Serving & Infrastructure' },
+          { setNumber: 3, name: 'Set C: Enterprise Architecture & Strategy' }
+        ]
+      }
+    ];
+
+    // --- MAIN REACT APPLICATION COMPONENT ---
+    function App() {
+      const [authUser, setAuthUser] = useState(null);
+      const [currentUser, setCurrentUser] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ai_portal_user');
+          if (saved) return JSON.parse(saved);
+        } catch(e) {}
+        return null;
+      });
+
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [selectedPhase, setSelectedPhase] = useState(CURRICULUM_DATA[0]);
+      const [selectedSetNum, setSelectedSetNum] = useState(1);
+      const [selectedTopic, setSelectedTopic] = useState(CURRICULUM_DATA[0].topics[0]);
+
+      const [userProgress, setUserProgress] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ai_portal_progress');
+          if (saved) return JSON.parse(saved);
+        } catch(e) {}
+        return {
+          completedTopics: [],
+          passedExams: {},
+          quizScores: {}
+        };
+      });
+
+      const [showAuthModal, setShowAuthModal] = useState(false);
+      const [authForm, setAuthForm] = useState({ name: '', email: '', role: 'Forward Deployed Engineer' });
+
+      const [examMode, setExamMode] = useState(false);
+      const [activeQuestions, setActiveQuestions] = useState([]);
+      const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+      const [selectedAnswers, setSelectedAnswers] = useState({});
+      const [flaggedQuestions, setFlaggedQuestions] = useState({});
+      const [timeRemaining, setTimeRemaining] = useState(3600);
+      const [examFinished, setExamFinished] = useState(false);
+      const [examScore, setExamScore] = useState(null);
+
+      const [copiedLink, setCopiedLink] = useState(false);
+      const [settings, setSettings] = useState({ timerSound: true, darkMode: true, autoSubmitOnTimeout: true });
+
+      // FIREBASE AUTH INITIALIZATION & LISTENER
+      useEffect(() => {
+        const initAuth = async () => {
+          if (!window.FirebaseServices) return;
+          const { auth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } = window.FirebaseServices;
+
+          try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+              await signInAnonymously(auth);
+            }
+          } catch (err) {
+            console.warn("Auth Fallback:", err);
+          }
+
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setAuthUser(user);
+          });
+          return () => unsubscribe();
+        };
+
+        initAuth();
+      }, []);
+
+      // FIRESTORE REAL-TIME LISTENER FOR USER DATA
+      useEffect(() => {
+        if (!authUser || !window.FirebaseServices) return;
+        const { db, appId, doc, onSnapshot } = window.FirebaseServices;
+
+        const progressDocRef = doc(db, 'artifacts', appId, 'users', authUser.uid, 'progress');
+        const profileDocRef = doc(db, 'artifacts', appId, 'users', authUser.uid, 'profile');
+
+        const unsubProgress = onSnapshot(progressDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserProgress({
+              completedTopics: data.completedTopics || [],
+              passedExams: data.passedExams || {},
+              quizScores: data.quizScores || {}
+            });
+          }
+        }, (err) => console.error("Firestore Progress Error:", err));
+
+        const unsubProfile = onSnapshot(profileDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const profile = docSnap.data();
+            setCurrentUser(prev => ({ ...prev, ...profile, uid: authUser.uid }));
+          }
+        }, (err) => console.error("Firestore Profile Error:", err));
+
+        return () => {
+          unsubProgress();
+          unsubProfile();
+        };
+      }, [authUser]);
+
+      // FIRESTORE SYNC HELPERS
+      const saveUserProgressToCloud = async (newProgress) => {
+        setUserProgress(newProgress);
+        localStorage.setItem('ai_portal_progress', JSON.stringify(newProgress));
+
+        if (!authUser || !window.FirebaseServices) return;
+        const { db, appId, doc, setDoc } = window.FirebaseServices;
+
+        try {
+          const progressDocRef = doc(db, 'artifacts', appId, 'users', authUser.uid, 'progress');
+          await setDoc(progressDocRef, newProgress, { merge: true });
+        } catch (e) {
+          console.error("Cloud Progress Save Failed:", e);
+        }
+      };
+
+      const saveUserProfileToCloud = async (profileData) => {
+        setCurrentUser(profileData);
+        localStorage.setItem('ai_portal_user', JSON.stringify(profileData));
+
+        if (!authUser || !window.FirebaseServices) return;
+        const { db, appId, doc, setDoc } = window.FirebaseServices;
+
+        try {
+          const profileDocRef = doc(db, 'artifacts', appId, 'users', authUser.uid, 'profile');
+          await setDoc(profileDocRef, profileData, { merge: true });
+        } catch (e) {
+          console.error("Cloud Profile Save Failed:", e);
+        }
+      };
+
+      // Exam Timer Loop
+      useEffect(() => {
+        let timer;
+        if ((examMode || activeTab === 'quiz') && !examFinished && timeRemaining > 0) {
+          timer = setInterval(() => {
+            setTimeRemaining(prev => {
+              if (prev <= 1) {
+                clearInterval(timer);
+                handleFinishExam();
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+        return () => clearInterval(timer);
+      }, [examMode, activeTab, examFinished, timeRemaining]);
+
+      // Handlers
+      const handleAuthSubmit = async (e) => {
+        e.preventDefault();
+        const user = {
+          id: authUser?.uid || ('USR-' + Math.floor(1000 + Math.random() * 9000)),
+          name: authForm.name || 'Enterprise Learner',
+          email: authForm.email || 'learner@enterprise.ai',
+          role: authForm.role,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${authForm.name || 'AI'}`,
+          joinedDate: new Date().toLocaleDateString()
+        };
+        await saveUserProfileToCloud(user);
+        setShowAuthModal(false);
+      };
+
+      const handleOAuthLogin = async (provider) => {
+        const user = {
+          id: authUser?.uid || ('USR-' + Math.floor(1000 + Math.random() * 9000)),
+          name: `${provider} Certified Professional`,
+          email: `pro.${provider.toLowerCase()}@enterprise-ai.com`,
+          role: 'AI Enterprise Architect',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`,
+          joinedDate: new Date().toLocaleDateString()
+        };
+        await saveUserProfileToCloud(user);
+        setShowAuthModal(false);
+      };
+
+      // Start a 50-Question Phase Exam Set
+      const handleStartPhaseExamSet = (phase, setNum) => {
+        if (!currentUser) {
+          setShowAuthModal(true);
+          return;
+        }
+        setSelectedPhase(phase);
+        setSelectedSetNum(setNum);
+
+        const rawSetQuestions = buildPhaseQuestionsSet(phase.id, setNum);
+        const shuffledQuestions = shuffleArray(rawSetQuestions);
+
+        setActiveQuestions(shuffledQuestions);
+        setCurrentQuestionIdx(0);
+        setSelectedAnswers({});
+        setFlaggedQuestions({});
+        setTimeRemaining(phase.timeLimitMinutes * 60);
+        setExamMode(true);
+        setExamFinished(false);
+        setActiveTab('exam');
+      };
+
+      // Start Topic Quiz
+      const handleStartTopicQuiz = (phase, topic) => {
+        if (!currentUser) {
+          setShowAuthModal(true);
+          return;
+        }
+        setSelectedPhase(phase);
+        setSelectedTopic(topic);
+
+        const rawQuestions = buildPhaseQuestionsSet(phase.id, 1).slice(0, 15);
+        const shuffledTopicQuestions = shuffleArray(rawQuestions);
+
+        setActiveQuestions(shuffledTopicQuestions);
+        setCurrentQuestionIdx(0);
+        setSelectedAnswers({});
+        setFlaggedQuestions({});
+        setTimeRemaining(15 * 60);
+        setExamMode(false);
+        setExamFinished(false);
+        setActiveTab('quiz');
+      };
+
+      const handleFinishExam = async () => {
+        let correct = 0;
+        activeQuestions.forEach((q, idx) => {
+          if (selectedAnswers[idx] === q.answer) correct++;
+        });
+        const percentage = activeQuestions.length > 0 ? Math.round((correct / activeQuestions.length) * 100) : 0;
+        setExamScore({ correct, total: activeQuestions.length, percentage });
+        setExamFinished(true);
+
+        if (examMode) {
+          if (percentage >= 70) {
+            const certId = `CERT-${selectedPhase.id.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            const newProgress = {
+              ...userProgress,
+              passedExams: {
+                ...userProgress.passedExams,
+                [`${selectedPhase.id}_set${selectedSetNum}`]: {
+                  score: percentage,
+                  date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  certId: certId,
+                  phaseTitle: `${selectedPhase.title} - Set ${selectedSetNum}`,
+                  userRole: currentUser?.role || 'AI Enterprise Specialist'
+                }
+              }
+            };
+            await saveUserProgressToCloud(newProgress);
+          }
+        } else {
+          if (percentage >= 70) {
+            const newProgress = {
+              ...userProgress,
+              completedTopics: Array.from(new Set([...userProgress.completedTopics, selectedTopic.id]))
+            };
+            await saveUserProgressToCloud(newProgress);
+          }
+        }
+      };
+
+      const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+          {/* HEADER */}
+          <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3 flex items-center justify-between">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 p-0.5 shadow-lg shadow-indigo-500/20">
+                <div className="h-full w-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-indigo-400" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+                    iq9
+                  </span>
+                  <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    Assessment Edition
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 hidden sm:block">Exam Sets & Certification Portal</p>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <nav className="hidden md:flex items-center space-x-1 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80">
+              {[
+                { id: 'dashboard', label: 'Examination Sets', icon: BookOpen },
+                { id: 'certifications', label: 'Certifications', icon: Award },
+                { id: 'settings', label: 'Settings', icon: Settings },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isActive 
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* User Profile / Auth */}
+            <div className="flex items-center space-x-3">
+              {currentUser ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-xs font-semibold text-slate-200">{currentUser.name}</p>
+                    <p className="text-[10px] text-indigo-400 font-mono">{currentUser.role}</p>
+                  </div>
+                  <div className="relative group">
+                    <img 
+                      src={currentUser.avatar} 
+                      alt="Avatar" 
+                      className="h-9 w-9 rounded-xl border border-indigo-500/30 bg-slate-800 cursor-pointer object-cover"
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-1 hidden group-hover:block z-50">
+                      <div className="px-4 py-2 border-b border-slate-800">
+                        <p className="text-xs font-semibold text-white">{currentUser.name}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+                      </div>
+                      <button 
+                        onClick={() => setActiveTab('settings')}
+                        className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center space-x-2"
+                      >
+                        <Settings className="h-3.5 w-3.5" />
+                        <span>Profile Settings</span>
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (window.FirebaseServices) {
+                            await window.FirebaseServices.signOut(window.FirebaseServices.auth);
+                          }
+                          setCurrentUser(null);
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-500/10 flex items-center space-x-2"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/20 transition-all"
+                >
+                  <User className="h-4 w-4" />
+                  <span>Sign In / Register</span>
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* MAIN CONTENT AREA */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+            
+            {/* 1. DASHBOARD VIEW (EXAM SETS) */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-8">
+                {/* Hero Banner */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-indigo-500/20 p-6 sm:p-8 shadow-2xl">
+                  <div className="relative z-10 max-w-3xl space-y-3">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                      Enterprise AI Examination Engine
+                    </h1>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      Select an Exam Set below to test your operational competency. Questions are never repeated within a 50-question set and are randomized dynamically on every attempt.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phase Exam Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {CURRICULUM_DATA.map((phase) => {
+                    const PhaseIcon = phase.icon;
+
+                    return (
+                      <div 
+                        key={phase.id}
+                        className="bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between space-y-6 shadow-xl"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className={`p-3 rounded-xl bg-gradient-to-r ${phase.color} text-white shadow-lg`}>
+                              <PhaseIcon className="h-6 w-6" />
+                            </div>
+                            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                              {phase.badge}
+                            </span>
+                          </div>
+
+                          <h2 className="text-lg font-bold text-white">
+                            {phase.title}
+                          </h2>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {phase.subtitle}
+                          </p>
+
+                          {/* 50-Question Exam Sets Selector */}
+                          <div className="mt-6 space-y-3">
+                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider font-mono">
+                              Available 50-Question Exam Sets:
+                            </span>
+
+                            <div className="grid grid-cols-1 gap-2.5">
+                              {phase.sets.map((setObj) => {
+                                const certKey = `${phase.id}_set${setObj.setNumber}`;
+                                const passedCert = userProgress.passedExams[certKey];
+
+                                return (
+                                  <div
+                                    key={setObj.setNumber}
+                                    className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 hover:border-indigo-500/50
