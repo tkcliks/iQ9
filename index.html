@@ -1,0 +1,17 @@
+<!-- 1. Tailwind CSS (Utility-First Dark Mode Styling) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- 2. React 18 & ReactDOM 18 (Component UI Framework) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+<!-- 3. Babel Standalone (In-Browser JSX Compiler) -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- 4. Firebase 11 Web SDKs (Real-Time Auth & Firestore DB Persistence) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  ...
+</script>
