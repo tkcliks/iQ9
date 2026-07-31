@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iq9 - Enterprise Assessment Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { slate: { 950: '#020617' } } } }
+    }
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="module" src="./firebase.js"></script>
+
+  <script>
+    window.QUESTION_BANK = {};
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel" src="./questions/phase1-questions.js"></script>
+  <script type="text/babel" src="./questions/phase2-questions.js"></script>
+  <script type="text/babel" src="./questions/phase3-questions.js"></script>
+  <script type="text/babel" src="./questions/phase4-questions.js"></script>
+
+  <script type="text/babel" src="./app.js"></script>
+</body>
+</html>
